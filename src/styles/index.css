@@ -1,0 +1,63 @@
+/* PocketShelf — Tailwind v4 entry + theme tokens (design-system.md §8).
+   Fonts are imported in main.tsx via @fontsource packages. */
+
+@import "tailwindcss";
+
+@theme {
+  --color-primary-300: #a99bff;
+  --color-primary-400: #8b7bf4;
+  --color-primary-500: #6c5ce7;
+  --color-primary-600: #5a4bd1;
+  --color-primary-700: #483bad;
+  --color-bg-base: #121217;
+  --color-bg-sidebar: #17171e;
+  --color-bg-surface: #1c1c24;
+  --color-bg-raised: #23232d;
+  --color-bg-overlay: #2a2a36;
+  --color-border-default: #2e2e3a;
+  --color-border-strong: #3d3d4c;
+  --color-silver-100: #f2f2f5;
+  --color-silver-300: #c8c8d4;
+  --color-silver-500: #8e8ea0;
+  --color-silver-700: #5c5c6e;
+  --color-mint: #4fd8b0;
+  --color-amber: #ffc75f;
+  --color-coral: #ff7e6b;
+  --color-gba: #8b7bf4;
+  --color-nds: #5fb7d4;
+  --font-display: "Nunito Variable", ui-rounded, system-ui, sans-serif;
+  --font-body: "Manrope Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius-card: 16px;
+  --radius-control: 10px;
+}
+
+:root {
+  color-scheme: dark light;
+  --ps-primary-glow: rgba(108, 92, 231, 0.35);
+  --ps-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.18);
+  --ps-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.25), 0 12px 28px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(139, 123, 244, 0.18);
+  --ps-shadow-overlay: 0 8px 40px rgba(0, 0, 0, 0.45);
+  --ps-glow-primary: 0 0 24px var(--ps-primary-glow);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-base);
+  color: var(--color-silver-300);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle dot-grid texture for the main content area (design-system.md §3.3). */
+.ps-texture {
+  background-image: radial-gradient(rgba(139, 123, 244, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
