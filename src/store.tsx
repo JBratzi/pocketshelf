@@ -92,10 +92,15 @@ function writeCache(games: Game[], lastScanAt: number) {
 
 interface LibraryContextValue {
   state: AppState;
-  /** Rescans the library (current rom_folders unless overridden). */
-  rescan: (foldersOverride?: string[], opts?: { silent?: boolean }) => Promise<void>;
-  /** Persists settings via the backend, then rescans if folders changed. */
+  /** Rescans the library (current rom_folders/rom_files unless overridden). */
+  rescan: (
+    override?: { folders?: string[]; files?: string[] },
+    opts?: { silent?: boolean },
+  ) => Promise<void>;
+  /** Persists settings via the backend, then rescans if sources changed. */
   updateSettings: (settings: Settings) => Promise<void>;
+  /** Adds dropped paths (folders and/or .gba/.nds files), persists, rescans. */
+  addPaths: (paths: string[]) => Promise<void>;
   /** Launches a game with the platform's configured emulator. */
   play: (game: Game) => Promise<void>;
   clearError: () => void;
@@ -120,12 +125,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const scanGenRef = useRef(0);
 
   const rescan = useCallback(
-    async (foldersOverride?: string[], opts?: { silent?: boolean }) => {
+    async (
+      override?: { folders?: string[]; files?: string[] },
+      opts?: { silent?: boolean },
+    ) => {
       const gen = ++scanGenRef.current;
-      const folders = foldersOverride ?? settingsRef.current.rom_folders;
+      const folders = override?.folders ?? settingsRef.current.rom_folders;
+      const files = override?.files ?? settingsRef.current.rom_files;
       dispatch({ type: "SCAN_START" });
       try {
-        const games = await ipc.scanLibrary(folders);
+        const games = await ipc.scanPaths(folders, files);
         if (gen !== scanGenRef.current) return; // superseded by a newer rescan
         const at = Date.now();
         dispatch({ type: "SCAN_SUCCESS", games, at });
@@ -162,10 +171,36 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       }
       const changed =
         prevSettings.rom_folders.length !== settings.rom_folders.length ||
-        prevSettings.rom_folders.some((f, i) => f !== settings.rom_folders[i]);
-      if (changed) void rescan(settings.rom_folders);
+        prevSettings.rom_folders.some((f, i) => f !== settings.rom_folders[i]) ||
+        prevSettings.rom_files.length !== settings.rom_files.length ||
+        prevSettings.rom_files.some((f, i) => f !== settings.rom_files[i]);
+      if (changed) {
+        void rescan({ folders: settings.rom_folders, files: settings.rom_files });
+      }
     },
     [rescan, toast],
+  );
+
+  const addPaths = useCallback(
+    async (paths: string[]) => {
+      const s = settingsRef.current;
+      const isRom = (p: string) => /\.(gba|nds)$/i.test(p);
+      const newFiles = paths.filter((p) => isRom(p) && !s.rom_files.includes(p));
+      const newFolders = paths.filter((p) => !isRom(p) && !s.rom_folders.includes(p));
+      if (newFiles.length === 0 && newFolders.length === 0) {
+        toast("info", "Already on your shelf — rescanning…");
+        void rescan();
+        return;
+      }
+      const added = newFiles.length + newFolders.length;
+      toast("success", `Added ${added} ${added === 1 ? "item" : "items"} — scanning…`);
+      await updateSettings({
+        ...s,
+        rom_folders: [...s.rom_folders, ...newFolders],
+        rom_files: [...s.rom_files, ...newFiles],
+      });
+    },
+    [rescan, toast, updateSettings],
   );
 
   const play = useCallback(
@@ -201,10 +236,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         if (!cancelled) toast("error", String(err));
       }
       if (cancelled) return;
-      // No folders configured → the cache (possibly from a previous folder
+      // No sources configured → the cache (possibly from a previous source
       // set) is meaningless: drop it so ghost games never survive a boot.
-      const usableCache = settings.rom_folders.length > 0 ? cached : null;
-      if (settings.rom_folders.length === 0 && cached !== null) {
+      const hasSources =
+        settings.rom_folders.length > 0 || settings.rom_files.length > 0;
+      const usableCache = hasSources ? cached : null;
+      if (!hasSources && cached !== null) {
         try {
           localStorage.removeItem(CACHE_KEY);
         } catch {
@@ -217,8 +254,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         settings,
         lastScanAt: usableCache?.lastScanAt ?? null,
       });
-      if (settings.rom_folders.length > 0) {
-        void rescan(settings.rom_folders, { silent: usableCache !== null });
+      if (hasSources) {
+        void rescan(
+          { folders: settings.rom_folders, files: settings.rom_files },
+          { silent: usableCache !== null },
+        );
       }
     })();
     return () => {
@@ -228,8 +268,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, rescan, updateSettings, play, clearError }),
-    [state, rescan, updateSettings, play, clearError],
+    () => ({ state, rescan, updateSettings, addPaths, play, clearError }),
+    [state, rescan, updateSettings, addPaths, play, clearError],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

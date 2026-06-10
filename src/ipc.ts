@@ -10,6 +10,14 @@ export async function scanLibrary(folders: string[]): Promise<Game[]> {
   return invoke<Game[]>("scan_library", { folders });
 }
 
+/** Like scanLibrary, plus individually-added loose ROM files (drag & drop). */
+export async function scanPaths(
+  folders: string[],
+  files: string[],
+): Promise<Game[]> {
+  return invoke<Game[]>("scan_paths", { folders, files });
+}
+
 /** Loads persisted settings; returns defaults if none saved yet. */
 export async function getSettings(): Promise<Settings> {
   return invoke<Settings>("get_settings");

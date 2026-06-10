@@ -1,6 +1,6 @@
 // GameCard — design-system.md §4.1 + motion §5.2/§5.3.
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Play } from "lucide-react";
 import type { Game } from "../types";
@@ -19,7 +19,10 @@ interface GameCardProps {
 
 function GameCardInner({ game, index, selected, onSelect, onPlay }: GameCardProps) {
   const reduced = useReducedMotion();
-  const icon = iconDataUri(game);
+  // Corrupt banner data in a real ROM must degrade to the monogram tile,
+  // never to a broken <img> box.
+  const [iconFailed, setIconFailed] = useState(false);
+  const icon = iconFailed ? null : iconDataUri(game);
 
   return (
     <motion.button
@@ -50,6 +53,7 @@ function GameCardInner({ game, index, selected, onSelect, onPlay }: GameCardProp
             draggable={false}
             className="h-full w-full object-cover"
             style={{ imageRendering: "pixelated" }}
+            onError={() => setIconFailed(true)}
           />
         ) : (
           <div

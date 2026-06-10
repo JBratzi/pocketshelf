@@ -17,6 +17,15 @@ pub async fn scan_library(folders: Vec<String>) -> Result<Vec<Game>, String> {
         .map_err(|e| format!("scan_library: scan task failed: {e}"))
 }
 
+/// §2.1b — like scan_library, plus individually-added loose files
+/// (drag & drop). Same skip-on-error semantics.
+#[tauri::command]
+pub async fn scan_paths(folders: Vec<String>, files: Vec<String>) -> Result<Vec<Game>, String> {
+    tauri::async_runtime::spawn_blocking(move || rom::scan_paths(&folders, &files))
+        .await
+        .map_err(|e| format!("scan_paths: scan task failed: {e}"))
+}
+
 /// §2.2 — read settings.json; defaults if missing/corrupt.
 #[tauri::command]
 pub fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {

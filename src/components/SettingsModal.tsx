@@ -54,6 +54,10 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
     setDraft((d) => ({ ...d, rom_folders: d.rom_folders.filter((f) => f !== path) }));
   }
 
+  function removeFile(path: string) {
+    setDraft((d) => ({ ...d, rom_files: d.rom_files.filter((f) => f !== path) }));
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -150,6 +154,38 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
               Add folder…
             </button>
           </section>
+
+          {/* Individual ROM files (added via drag & drop) */}
+          {draft.rom_files.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <SectionTitle>Dropped files</SectionTitle>
+              <p className="font-body text-xs leading-4 font-medium text-silver-500">
+                Individual ROMs added by dropping them onto the window.
+              </p>
+              {draft.rom_files.map((file) => (
+                <div
+                  key={file}
+                  className="flex items-center gap-2.5 rounded-[10px] bg-bg-raised px-3 py-2"
+                >
+                  <Folder size={16} className="shrink-0 text-silver-500" />
+                  <span
+                    className="min-w-0 flex-1 truncate font-mono text-xs leading-[18px] text-silver-300 select-text"
+                    title={file}
+                  >
+                    {middleTruncate(file, 52)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file)}
+                    className="shrink-0 rounded-md p-1 text-silver-500 transition-colors hover:text-coral"
+                    aria-label={`Remove file ${file}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* Emulators */}
           <section className="flex flex-col gap-3">

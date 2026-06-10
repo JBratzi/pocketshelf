@@ -9,6 +9,9 @@ use tauri::Manager;
 pub struct Settings {
     /// Absolute paths of folders to scan.
     pub rom_folders: Vec<String>,
+    /// Absolute paths of individual ROM files added outside any scanned
+    /// folder (e.g. via drag & drop onto the window).
+    pub rom_files: Vec<String>,
     /// macOS app name passed to `open -a`, e.g. "OpenEmu".
     pub emulator_gba: String,
     /// macOS app name passed to `open -a`, e.g. "melonDS".
@@ -19,8 +22,9 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             rom_folders: Vec::new(),
+            rom_files: Vec::new(),
             emulator_gba: "OpenEmu".to_string(),
-            emulator_nds: "OpenEmu".to_string(),
+            emulator_nds: "melonDS".to_string(),
         }
     }
 }

@@ -4,7 +4,7 @@ pub mod commands;
 pub mod rom;
 pub mod settings;
 
-use commands::{get_settings, launch_game, pick_folder, save_settings, scan_library};
+use commands::{get_settings, launch_game, pick_folder, save_settings, scan_library, scan_paths};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             scan_library,
+            scan_paths,
             get_settings,
             save_settings,
             launch_game,

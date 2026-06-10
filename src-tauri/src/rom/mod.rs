@@ -45,6 +45,31 @@ pub struct Game {
 /// occurrence wins), sorted by internal_title then file_name (both
 /// case-insensitive). Never panics; per-file errors mean skip.
 pub fn scan(folders: &[String]) -> Vec<Game> {
+    scan_paths(folders, &[])
+}
+
+/// Parses a single candidate path: must be a regular file with a .gba/.nds
+/// extension within the size guard. Any failure means None (skip-on-error).
+fn parse_file(path: &Path) -> Option<Game> {
+    let ext = path.extension().and_then(|e| e.to_str())?.to_ascii_lowercase();
+    if ext != "gba" && ext != "nds" {
+        return None;
+    }
+    let meta = std::fs::metadata(path).ok()?;
+    if !meta.is_file() || meta.len() > MAX_FILE_SIZE {
+        return None;
+    }
+    match ext.as_str() {
+        "gba" => gba::parse_gba(path),
+        "nds" => nds::parse_nds(path),
+        _ => unreachable!(),
+    }
+}
+
+/// Like `scan`, plus individually-added `files` (drag & drop). Loose files
+/// skip the hidden-name filter — an explicit add is an explicit intent.
+/// Same dedup-by-id and sort guarantees as `scan`.
+pub fn scan_paths(folders: &[String], files: &[String]) -> Vec<Game> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut games: Vec<Game> = Vec::new();
 
@@ -62,28 +87,18 @@ pub fn scan(folders: &[String]) -> Vec<Game> {
             if !entry.file_type().is_file() {
                 continue;
             }
-            let path = entry.path();
-            let ext = match path.extension().and_then(|e| e.to_str()) {
-                Some(e) => e.to_ascii_lowercase(),
-                None => continue,
-            };
-            if ext != "gba" && ext != "nds" {
-                continue;
-            }
-            // Size guard: skip unreadable metadata and oversized files.
-            match entry.metadata() {
-                Ok(m) if m.len() <= MAX_FILE_SIZE => {}
-                _ => continue,
-            }
-            let game = match ext.as_str() {
-                "gba" => gba::parse_gba(path),
-                "nds" => nds::parse_nds(path),
-                _ => unreachable!(),
-            };
-            if let Some(g) = game {
+            if let Some(g) = parse_file(entry.path()) {
                 if seen.insert(g.id.clone()) {
                     games.push(g);
                 }
+            }
+        }
+    }
+
+    for file in files {
+        if let Some(g) = parse_file(Path::new(file)) {
+            if seen.insert(g.id.clone()) {
+                games.push(g);
             }
         }
     }

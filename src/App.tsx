@@ -1,7 +1,14 @@
 // PocketShelf — app shell: Sidebar + TopBar + Shelf grid + slide-in
 // DetailPanel + Settings modal (architecture.md §7, design-system.md).
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { AnimatePresence } from "motion/react";
 import type { Game } from "./types";
 import { useLibrary } from "./store";
@@ -13,10 +20,11 @@ import { Shelf } from "./components/Shelf";
 import { DetailPanel } from "./components/DetailPanel";
 import { EmptyState } from "./components/EmptyState";
 import { SettingsModal } from "./components/SettingsModal";
+import { DropOverlay } from "./components/DropOverlay";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 
 function App() {
-  const { state, rescan, updateSettings, play } = useLibrary();
+  const { state, rescan, updateSettings, addPaths, play } = useLibrary();
   const { toast } = useToast();
 
   // Derived UI state stays in component state (architecture.md §6).
@@ -26,7 +34,36 @@ function App() {
   const [selected, setSelected] = useState<Game | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Native drag & drop of ROM files/folders onto the window (Tauri only —
+  // in a plain dev browser there is no webview event source, so we no-op).
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    void (async () => {
+      const { getCurrentWebview } = await import("@tauri-apps/api/webview");
+      const stop = await getCurrentWebview().onDragDropEvent((event) => {
+        const t = event.payload.type;
+        if (t === "enter" || t === "over") {
+          setDragging(true);
+        } else if (t === "drop") {
+          setDragging(false);
+          void addPaths(event.payload.paths);
+        } else {
+          setDragging(false);
+        }
+      });
+      if (cancelled) stop();
+      else unlisten = stop;
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [addPaths]);
 
   const scanning = state.status === "scanning";
 
@@ -69,13 +106,21 @@ function App() {
   const closeDetail = useCallback(() => setDetailOpen(false), []);
 
   const handleRescan = useCallback(() => {
-    if (state.settings.rom_folders.length === 0) {
-      toast("warning", "No ROM folders configured yet — add one in Settings.");
+    if (
+      state.settings.rom_folders.length === 0 &&
+      state.settings.rom_files.length === 0
+    ) {
+      toast("warning", "No ROM sources configured yet — add a folder or drop files here.");
       setSettingsOpen(true);
       return;
     }
     void rescan();
-  }, [rescan, state.settings.rom_folders.length, toast]);
+  }, [
+    rescan,
+    state.settings.rom_folders.length,
+    state.settings.rom_files.length,
+    toast,
+  ]);
 
   // Empty-state CTA: pick a folder, persist it, scan right away.
   const addFirstFolder = useCallback(async () => {
@@ -210,6 +255,8 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>{dragging && <DropOverlay />}</AnimatePresence>
     </div>
   );
 }

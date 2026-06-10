@@ -99,6 +99,7 @@ export const MOCK_GAMES: Game[] = [
 
 export const MOCK_SETTINGS: Settings = {
   rom_folders: ["/Users/dev/RomDumps"],
+  rom_files: [],
   emulator_gba: "OpenEmu",
   emulator_nds: "melonDS",
 };

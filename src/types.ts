@@ -27,6 +27,8 @@ export interface Game {
 export interface Settings {
   /** Absolute folder paths to scan recursively. */
   rom_folders: string[];
+  /** Individual ROM files added outside any folder (drag & drop). */
+  rom_files: string[];
   /** macOS application name used with `open -a` for .gba files. */
   emulator_gba: string;
   /** macOS application name used with `open -a` for .nds files. */
@@ -35,8 +37,9 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   rom_folders: [],
+  rom_files: [],
   emulator_gba: "OpenEmu",
-  emulator_nds: "OpenEmu",
+  emulator_nds: "melonDS",
 };
 
 export function iconDataUri(game: Game): string | null {

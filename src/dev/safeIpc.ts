@@ -34,6 +34,13 @@ export function scanLibrary(folders: string[]): Promise<Game[]> {
   );
 }
 
+export function scanPaths(folders: string[], files: string[]): Promise<Game[]> {
+  return withDevFallback(
+    () => ipc.scanPaths(folders, files),
+    async () => (await import("./mockData")).MOCK_GAMES,
+  );
+}
+
 export function getSettings(): Promise<Settings> {
   return withDevFallback(
     () => ipc.getSettings(),
