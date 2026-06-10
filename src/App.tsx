@@ -20,6 +20,7 @@ import { Shelf } from "./components/Shelf";
 import { DetailPanel } from "./components/DetailPanel";
 import { EmptyState } from "./components/EmptyState";
 import { SettingsModal } from "./components/SettingsModal";
+import { HelpModal } from "./components/HelpModal";
 import { DropOverlay } from "./components/DropOverlay";
 import { useGlobalShortcuts } from "./useGlobalShortcuts";
 
@@ -34,6 +35,7 @@ function App() {
   const [selected, setSelected] = useState<Game | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -155,8 +157,9 @@ function App() {
     },
     onRescan: handleRescan,
     onOpenSettings: () => setSettingsOpen(true),
+    onHelp: () => setHelpOpen(true),
     onEscape: () => {
-      if (settingsOpen) return; // modal handles its own Esc (capture phase)
+      if (settingsOpen || helpOpen) return; // modals handle their own Esc (capture phase)
       if (document.activeElement === searchRef.current && query) {
         setQuery("");
       } else if (document.activeElement === searchRef.current) {
@@ -227,6 +230,7 @@ function App() {
           setDetailOpen(false);
         }}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -266,6 +270,10 @@ function App() {
             onClose={() => setSettingsOpen(false)}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>{dragging && <DropOverlay />}</AnimatePresence>

@@ -1,7 +1,7 @@
 // Sidebar — design-system.md §4.2 + §7 (traffic-light drag zone, faux vibrancy).
 
 import type { ReactNode } from "react";
-import { Gamepad2, Settings } from "lucide-react";
+import { CircleHelp, Gamepad2, Settings } from "lucide-react";
 import type { Game, Platform } from "../types";
 import { cx } from "../utils";
 
@@ -12,6 +12,7 @@ interface SidebarProps {
   filter: PlatformFilter;
   onFilter: (f: PlatformFilter) => void;
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }
 
 const PLATFORM_DOT: Record<Platform, string> = {
@@ -61,7 +62,13 @@ function GroupHeader({ children }: { children: string }) {
   );
 }
 
-export function Sidebar({ games, filter, onFilter, onOpenSettings }: SidebarProps) {
+export function Sidebar({
+  games,
+  filter,
+  onFilter,
+  onOpenSettings,
+  onOpenHelp,
+}: SidebarProps) {
   const gbaCount = games.filter((g) => g.platform === "gba").length;
   const ndsCount = games.filter((g) => g.platform === "nds").length;
 
@@ -99,6 +106,11 @@ export function Sidebar({ games, filter, onFilter, onOpenSettings }: SidebarProp
 
         <div className="flex-1" />
 
+        <Item active={false} onClick={onOpenHelp}>
+          <CircleHelp size={20} strokeWidth={2} className="shrink-0" />
+          <span>Tutorial</span>
+          <span className="ml-auto font-mono text-[10px] text-silver-700">?</span>
+        </Item>
         <Item active={false} onClick={onOpenSettings}>
           <Settings size={20} strokeWidth={2} className="shrink-0" />
           <span>Settings</span>
