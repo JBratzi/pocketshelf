@@ -1,10 +1,63 @@
 // TopBar — design-system.md §4.3. Acts as a drag region for the
 // hidden-title macOS window; interactive children are excluded automatically.
 
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowUpDown, RefreshCw, Search } from "lucide-react";
+import { ArrowUpDown, Gamepad2, RefreshCw, Search } from "lucide-react";
+import type { ControllerStatus } from "../types";
+import * as ipc from "../dev/safeIpc";
 import { cx } from "../utils";
+
+/** Gamepad icon: lights up green (with a status dot) while a physical
+ * controller is connected. Polls the backend every 5s — cheap HID lookup. */
+function ControllerIndicator() {
+  const [status, setStatus] = useState<ControllerStatus | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const tick = () =>
+      void ipc
+        .controllerStatus()
+        .then((s) => alive && setStatus(s))
+        .catch(() => alive && setStatus(null));
+    tick();
+    const t = setInterval(tick, 5_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const on = status?.connected ?? false;
+  return (
+    <span
+      className="relative flex h-8 w-8 items-center justify-center"
+      title={
+        on
+          ? `${status?.name ?? "Controller"} connected`
+          : "No controller — pair your DualSense via Bluetooth"
+      }
+      aria-label={on ? "Controller connected" : "No controller connected"}
+    >
+      <Gamepad2
+        size={18}
+        className={cx(
+          "transition-colors duration-300",
+          on ? "text-mint" : "text-silver-700",
+        )}
+        style={on ? { filter: "drop-shadow(0 0 6px rgba(52,211,153,0.55))" } : undefined}
+      />
+      {on && (
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute top-1 right-0.5 h-2 w-2 rounded-full bg-mint"
+          style={{ boxShadow: "0 0 5px rgba(52,211,153,0.8)" }}
+        />
+      )}
+    </span>
+  );
+}
 
 export type SortKey = "title" | "recent" | "size";
 
@@ -57,6 +110,9 @@ export const TopBar = forwardRef<HTMLInputElement, TopBarProps>(function TopBar(
       </div>
 
       <div className="flex-1" />
+
+      {/* Controller presence */}
+      <ControllerIndicator />
 
       {/* Sort — ghost button cycles Title / Recently added / Size */}
       <button

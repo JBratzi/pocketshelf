@@ -4,6 +4,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  ControllerStatus,
   Game,
   GameStats,
   MelonStatus,
@@ -89,6 +90,11 @@ export async function deleteSavestate(
   fileName: string,
 ): Promise<void> {
   return invoke<void>("delete_savestate", { romPath, fileName });
+}
+
+/** Is a physical game controller connected right now? */
+export async function controllerStatus(): Promise<ControllerStatus> {
+  return invoke<ControllerStatus>("controller_status");
 }
 
 /** melonDS integration status (config found? mappings applied?). */

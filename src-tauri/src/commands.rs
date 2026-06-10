@@ -108,6 +108,12 @@ pub fn restore_save(
     saves::restore(&app, &rom_path, &game_id, &file_name)
 }
 
+/// §2.16 — is a physical game controller connected right now?
+#[tauri::command]
+pub fn controller_status() -> Result<crate::controller::ControllerStatus, String> {
+    Ok(crate::controller::status())
+}
+
 /// §2.13 — melonDS integration status (config found? mappings applied?).
 #[tauri::command]
 pub fn melonds_status() -> Result<MelonStatus, String> {

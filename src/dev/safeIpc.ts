@@ -10,6 +10,7 @@
 
 import * as ipc from "../ipc";
 import type {
+  ControllerStatus,
   Game,
   GameStats,
   MelonStatus,
@@ -91,6 +92,13 @@ export function deleteSavestate(romPath: string, fileName: string): Promise<void
   return withDevFallback(
     () => ipc.deleteSavestate(romPath, fileName),
     async () => undefined,
+  );
+}
+
+export function controllerStatus(): Promise<ControllerStatus> {
+  return withDevFallback(
+    () => ipc.controllerStatus(),
+    async () => ({ connected: true, name: "DualSense (mock)" }),
   );
 }
 

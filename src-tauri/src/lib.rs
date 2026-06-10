@@ -1,6 +1,7 @@
 // PocketShelf — Tauri 2 backend entry. Contract: docs/architecture.md.
 
 pub mod commands;
+pub mod controller;
 pub mod melonds;
 pub mod rom;
 pub mod saves;
@@ -8,9 +9,9 @@ pub mod settings;
 pub mod stats;
 
 use commands::{
-    backup_save, delete_save_slot, delete_savestate, get_settings, get_stats, launch_game,
-    list_saves, melonds_apply_dualsense, melonds_apply_keyboard, melonds_status, pick_folder,
-    pick_rom_files, restore_save, save_settings, scan_library, scan_paths,
+    backup_save, controller_status, delete_save_slot, delete_savestate, get_settings, get_stats,
+    launch_game, list_saves, melonds_apply_dualsense, melonds_apply_keyboard, melonds_status,
+    pick_folder, pick_rom_files, restore_save, save_settings, scan_library, scan_paths,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -34,7 +35,8 @@ pub fn run() {
             delete_savestate,
             melonds_status,
             melonds_apply_keyboard,
-            melonds_apply_dualsense
+            melonds_apply_dualsense,
+            controller_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

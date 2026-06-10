@@ -67,6 +67,12 @@ export interface SaveInfo {
   states: SlotMeta[];
 }
 
+export interface ControllerStatus {
+  connected: boolean;
+  /** Friendly name when recognizable ("DualSense"…). */
+  name: string | null;
+}
+
 export interface MelonStatus {
   config_found: boolean;
   keyboard_mapped: boolean;
