@@ -60,6 +60,9 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
       await onSave(draft);
       toast("success", "Settings saved");
       onClose();
+    } catch {
+      // updateSettings already showed the error toast; keep the modal open
+      // so the user can retry without losing the draft.
     } finally {
       setSaving(false);
     }

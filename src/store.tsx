@@ -114,16 +114,19 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const settingsRef = useRef(state.settings);
   settingsRef.current = state.settings;
-  const scanningRef = useRef(false);
+  // Generation token: every rescan bumps it; only the latest generation may
+  // apply results / write the cache. Concurrent requests are never dropped —
+  // a newer call (e.g. folders changed mid-scan) simply supersedes older ones.
+  const scanGenRef = useRef(0);
 
   const rescan = useCallback(
     async (foldersOverride?: string[], opts?: { silent?: boolean }) => {
-      if (scanningRef.current) return;
+      const gen = ++scanGenRef.current;
       const folders = foldersOverride ?? settingsRef.current.rom_folders;
-      scanningRef.current = true;
       dispatch({ type: "SCAN_START" });
       try {
         const games = await ipc.scanLibrary(folders);
+        if (gen !== scanGenRef.current) return; // superseded by a newer rescan
         const at = Date.now();
         dispatch({ type: "SCAN_SUCCESS", games, at });
         writeCache(games, at);
@@ -134,11 +137,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           );
         }
       } catch (err) {
+        if (gen !== scanGenRef.current) return; // stale failure — ignore
         const message = String(err);
         dispatch({ type: "SCAN_ERROR", message });
         toast("error", message);
-      } finally {
-        scanningRef.current = false;
       }
     },
     [toast],
@@ -146,17 +148,21 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = useCallback(
     async (settings: Settings) => {
-      const prevFolders = settingsRef.current.rom_folders;
+      const prevSettings = settingsRef.current;
       dispatch({ type: "SET_SETTINGS", settings });
       try {
         await ipc.saveSettings(settings);
       } catch (err) {
+        // Roll back the optimistic update so in-memory settings never
+        // diverge from what is actually persisted on disk, then rethrow
+        // so callers (e.g. SettingsModal) know the save failed.
+        dispatch({ type: "SET_SETTINGS", settings: prevSettings });
         toast("error", String(err));
-        return;
+        throw err;
       }
       const changed =
-        prevFolders.length !== settings.rom_folders.length ||
-        prevFolders.some((f, i) => f !== settings.rom_folders[i]);
+        prevSettings.rom_folders.length !== settings.rom_folders.length ||
+        prevSettings.rom_folders.some((f, i) => f !== settings.rom_folders[i]);
       if (changed) void rescan(settings.rom_folders);
     },
     [rescan, toast],
@@ -195,14 +201,24 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         if (!cancelled) toast("error", String(err));
       }
       if (cancelled) return;
+      // No folders configured → the cache (possibly from a previous folder
+      // set) is meaningless: drop it so ghost games never survive a boot.
+      const usableCache = settings.rom_folders.length > 0 ? cached : null;
+      if (settings.rom_folders.length === 0 && cached !== null) {
+        try {
+          localStorage.removeItem(CACHE_KEY);
+        } catch {
+          // Non-fatal — cache is an optimization.
+        }
+      }
       dispatch({
         type: "HYDRATE",
-        games: cached?.games ?? [],
+        games: usableCache?.games ?? [],
         settings,
-        lastScanAt: cached?.lastScanAt ?? null,
+        lastScanAt: usableCache?.lastScanAt ?? null,
       });
       if (settings.rom_folders.length > 0) {
-        void rescan(settings.rom_folders, { silent: cached !== null });
+        void rescan(settings.rom_folders, { silent: usableCache !== null });
       }
     })();
     return () => {
