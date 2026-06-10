@@ -68,3 +68,10 @@ export function pickFolder(): Promise<string | null> {
     async () => "/Users/dev/RomDumps",
   );
 }
+
+export function pickRomFiles(): Promise<string[]> {
+  return withDevFallback(
+    () => ipc.pickRomFiles(),
+    async () => [],
+  );
+}

@@ -2,13 +2,14 @@
 // PocketShelf catalogs the user's own cartridge dumps.
 
 import { motion, useReducedMotion } from "motion/react";
-import { FolderPlus } from "lucide-react";
+import { FilePlus2, FolderPlus } from "lucide-react";
 import { spring } from "../animations";
 
 interface EmptyStateProps {
   variant: "no-folders" | "no-games" | "no-results";
   query?: string;
   onAddFolder: () => void;
+  onAddFiles?: () => void;
   onClearSearch?: () => void;
 }
 
@@ -31,7 +32,13 @@ const COPY: Record<EmptyStateProps["variant"], { emoji: string; headline: string
     },
   };
 
-export function EmptyState({ variant, query, onAddFolder, onClearSearch }: EmptyStateProps) {
+export function EmptyState({
+  variant,
+  query,
+  onAddFolder,
+  onAddFiles,
+  onClearSearch,
+}: EmptyStateProps) {
   const reduced = useReducedMotion();
   const copy = COPY[variant];
 
@@ -77,18 +84,38 @@ export function EmptyState({ variant, query, onAddFolder, onClearSearch }: Empty
           Clear search
         </button>
       ) : (
-        <motion.button
-          type="button"
-          onClick={onAddFolder}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          transition={spring.snappy}
-          className="mt-4 flex items-center gap-2 rounded-full bg-primary-500 px-6 py-2.5 font-display text-[15px] font-bold text-white transition-colors hover:bg-primary-600 active:bg-primary-700"
-          style={{ boxShadow: "var(--ps-glow-primary)" }}
-        >
-          <FolderPlus size={18} />
-          Add your ROM folder
-        </motion.button>
+        <div className="mt-4 flex items-center gap-3">
+          <motion.button
+            type="button"
+            onClick={onAddFolder}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={spring.snappy}
+            className="flex items-center gap-2 rounded-full bg-primary-500 px-6 py-2.5 font-display text-[15px] font-bold text-white transition-colors hover:bg-primary-600 active:bg-primary-700"
+            style={{ boxShadow: "var(--ps-glow-primary)" }}
+          >
+            <FolderPlus size={18} />
+            Add your ROM folder
+          </motion.button>
+          {onAddFiles && (
+            <motion.button
+              type="button"
+              onClick={onAddFiles}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={spring.snappy}
+              className="flex items-center gap-2 rounded-full border border-border-strong px-6 py-2.5 font-display text-[15px] font-bold text-silver-300 transition-colors hover:border-primary-500 hover:text-silver-100"
+            >
+              <FilePlus2 size={18} />
+              Add ROM files…
+            </motion.button>
+          )}
+        </div>
+      )}
+      {variant !== "no-results" && (
+        <p className="mt-3 font-body text-xs font-medium text-silver-700">
+          …or just drag & drop .gba/.nds files anywhere on this window.
+        </p>
       )}
     </div>
   );

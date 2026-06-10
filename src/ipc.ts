@@ -40,3 +40,8 @@ export async function launchGame(
 export async function pickFolder(): Promise<string | null> {
   return invoke<string | null>("pick_folder");
 }
+
+/** Native multi-file picker filtered to .gba/.nds. Empty array on cancel. */
+export async function pickRomFiles(): Promise<string[]> {
+  return invoke<string[]>("pick_rom_files");
+}

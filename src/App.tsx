@@ -138,6 +138,16 @@ function App() {
     }
   }, [state.settings, updateSettings, toast]);
 
+  // Empty-state CTA: pick individual ROM files (native picker, gba/nds filter).
+  const addRomFiles = useCallback(async () => {
+    try {
+      const paths = await ipc.pickRomFiles();
+      if (paths.length > 0) await addPaths(paths);
+    } catch (err) {
+      toast("error", String(err));
+    }
+  }, [addPaths, toast]);
+
   useGlobalShortcuts({
     onFocusSearch: () => {
       searchRef.current?.focus();
@@ -184,6 +194,7 @@ function App() {
         variant="no-results"
         query={query}
         onAddFolder={addFirstFolder}
+        onAddFiles={addRomFiles}
         onClearSearch={() => setQuery("")}
       />
     );
@@ -200,6 +211,7 @@ function App() {
       <EmptyState
         variant={hasFolders ? "no-games" : "no-folders"}
         onAddFolder={addFirstFolder}
+        onAddFiles={addRomFiles}
       />
     );
   }

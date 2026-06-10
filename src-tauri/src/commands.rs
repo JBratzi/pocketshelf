@@ -60,6 +60,27 @@ pub fn launch_game(path: String, emulator_app: String) -> Result<(), String> {
     Ok(())
 }
 
+/// §2.6 — native multi-file picker filtered to ROM extensions.
+/// Empty vec on user cancel.
+#[tauri::command]
+pub async fn pick_rom_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .add_filter("ROM files", &["gba", "nds"])
+            .blocking_pick_files()
+    })
+    .await
+    .map_err(|e| format!("pick_rom_files: dialog task failed: {e}"))?;
+
+    Ok(picked
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|f| f.into_path().ok())
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect())
+}
+
 /// §2.5 — Rust-side native folder picker (tauri-plugin-dialog).
 /// Ok(None) on user cancel.
 #[tauri::command]
