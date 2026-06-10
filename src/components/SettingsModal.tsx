@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Folder, FolderPlus, Trash2, X } from "lucide-react";
-import type { Settings } from "../types";
+import { Folder, FolderPlus, Gamepad2, Keyboard, Trash2, X } from "lucide-react";
+import type { MelonStatus, Settings } from "../types";
 import { spring } from "../animations";
 import { middleTruncate } from "../utils";
 import * as ipc from "../dev/safeIpc";
@@ -26,6 +26,28 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
   const { toast } = useToast();
   const [draft, setDraft] = useState<Settings>(settings);
   const [saving, setSaving] = useState(false);
+  const [melon, setMelon] = useState<MelonStatus | null>(null);
+  const [applying, setApplying] = useState(false);
+
+  useEffect(() => {
+    void ipc.melondsStatus().then(setMelon).catch(() => setMelon(null));
+  }, []);
+
+  async function applyMapping(kind: "keyboard" | "dualsense") {
+    setApplying(true);
+    try {
+      const msg =
+        kind === "keyboard"
+          ? await ipc.melondsApplyKeyboard()
+          : await ipc.melondsApplyDualsense();
+      toast("success", `melonDS: ${msg}`);
+      setMelon(await ipc.melondsStatus());
+    } catch (err) {
+      toast("error", String(err));
+    } finally {
+      setApplying(false);
+    }
+  }
 
   // Esc closes (also handled globally, but the modal must win while open).
   useEffect(() => {
@@ -186,6 +208,47 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
               ))}
             </section>
           )}
+
+          {/* melonDS integration */}
+          <section className="flex flex-col gap-3">
+            <SectionTitle>melonDS integration</SectionTitle>
+            <p className="font-body text-xs leading-4 font-medium text-silver-500">
+              PocketShelf can write the control mappings straight into melonDS&apos;s
+              config (a .bak backup is kept). Quit melonDS before applying.
+            </p>
+            {melon && !melon.config_found && (
+              <p className="rounded-[10px] border border-dashed border-border-strong px-3 py-2.5 font-body text-xs font-medium text-silver-500">
+                melonDS config not found yet — open melonDS once, quit it, then
+                come back here.
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={applying || !melon?.config_found}
+                onClick={() => applyMapping("keyboard")}
+                className="flex h-9 items-center gap-2 rounded-full border border-border-strong px-4 font-display text-[13px] font-bold text-silver-300 transition-colors hover:border-primary-500 hover:text-silver-100 disabled:opacity-50"
+              >
+                <Keyboard size={15} />
+                {melon?.keyboard_mapped ? "Re-apply keyboard keys" : "Set up keyboard keys"}
+              </button>
+              <button
+                type="button"
+                disabled={applying || !melon?.config_found}
+                onClick={() => applyMapping("dualsense")}
+                className="flex h-9 items-center gap-2 rounded-full border border-border-strong px-4 font-display text-[13px] font-bold text-silver-300 transition-colors hover:border-primary-500 hover:text-silver-100 disabled:opacity-50"
+              >
+                <Gamepad2 size={15} />
+                {melon?.joystick_mapped ? "Re-apply PS5 controller" : "Set up PS5 controller"}
+              </button>
+            </div>
+            <p className="font-body text-[11px] leading-4 font-medium text-silver-700">
+              Keyboard: arrows = D-pad · X/Z/S/A = A/B/X/Y · Q/W = L/R · Enter =
+              Start · Shift = Select · Tab = fast-forward · F11 = fullscreen.
+              Controller: pair the DualSense via Bluetooth first; if a button
+              doesn&apos;t respond, fine-tune in melonDS → Config → Input.
+            </p>
+          </section>
 
           {/* Emulators */}
           <section className="flex flex-col gap-3">

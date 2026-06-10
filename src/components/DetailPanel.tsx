@@ -156,6 +156,43 @@ function LauncherSections({ game }: { game: Game }) {
           />
         )}
 
+        {(saves?.states ?? []).length > 0 && (
+          <>
+            <p className="mt-1 font-body text-[10px] leading-4 font-medium text-silver-700">
+              Quick-saves (melonDS F1–F8 states — load them in-game with F1–F8)
+            </p>
+            {(saves?.states ?? []).map((st) => (
+              <div
+                key={st.file_name}
+                className="flex items-center justify-between gap-2 rounded-xl border border-border-default px-3 py-1.5"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <span className="font-body text-xs font-bold text-silver-300">
+                    F{st.file_name.slice(-1)} quick-save
+                  </span>
+                  <span className="font-mono text-[10px] leading-4 text-silver-500">
+                    {formatBytes(st.size_bytes)} · {formatDateTime(st.modified_at)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => ipc.deleteSavestate(game.path, st.file_name),
+                      "Quick-save deleted",
+                    )
+                  }
+                  className="shrink-0 rounded-full p-1.5 text-silver-500 transition-colors hover:bg-white/5 hover:text-coral disabled:opacity-50"
+                  title="Delete this quick-save state"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
         {(saves?.slots ?? []).map((slot) => (
           <div
             key={slot.file_name}

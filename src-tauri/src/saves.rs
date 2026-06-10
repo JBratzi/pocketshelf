@@ -23,6 +23,9 @@ pub struct SaveInfo {
     pub live: Option<SlotMeta>,
     /// Named snapshots, newest first.
     pub slots: Vec<SlotMeta>,
+    /// melonDS quick-save states `<rom>.ml1..ml8` next to the ROM, in
+    /// F-key order. file_name keeps the real name; slot number = extension.
+    pub states: Vec<SlotMeta>,
 }
 
 fn live_path(rom_path: &str) -> PathBuf {
@@ -98,7 +101,30 @@ pub fn list(app: &tauri::AppHandle, rom_path: &str, game_id: &str) -> Result<Sav
         .filter_map(|e| meta_of(&e.path()))
         .collect();
     slots.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
-    Ok(SaveInfo { live, slots })
+    let states = (1..=8)
+        .filter_map(|i| meta_of(&Path::new(rom_path).with_extension(format!("ml{i}"))))
+        .collect();
+    Ok(SaveInfo { live, slots, states })
+}
+
+/// Deletes one melonDS quick-save state. `file_name` must be exactly one of
+/// the `<rom>.ml1..ml8` siblings — anything else is rejected.
+pub fn delete_state(rom_path: &str, file_name: &str) -> Result<(), String> {
+    let valid = (1..=8).any(|i| {
+        Path::new(rom_path)
+            .with_extension(format!("ml{i}"))
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy() == file_name)
+    });
+    if !valid {
+        return Err(format!("saves: '{file_name}' is not a quick-save of this game"));
+    }
+    let path = Path::new(rom_path).with_file_name(file_name);
+    if !path.is_file() {
+        return Err(format!("saves: quick-save '{file_name}' not found"));
+    }
+    std::fs::remove_file(&path).map_err(|e| format!("saves: delete failed: {e}"))?;
+    Ok(())
 }
 
 pub fn backup(
@@ -141,6 +167,49 @@ pub fn restore(
     }
     std::fs::copy(&slot, &live).map_err(|e| format!("saves: restore copy failed: {e}"))?;
     Ok(())
+}
+
+/// How many `auto ` snapshots to keep per game (newest wins).
+const AUTO_KEEP: usize = 5;
+
+/// Post-session snapshot, called by the playtime tracker when the emulator
+/// exits. Skips when the live save was not touched during the session (the
+/// user opened and closed without saving). Prunes old auto slots.
+pub fn auto_backup(
+    app: &tauri::AppHandle,
+    rom_path: &str,
+    game_id: &str,
+    session_start_ms: i64,
+) -> Result<Option<SlotMeta>, String> {
+    let live = live_path(rom_path);
+    let Some(live_meta) = meta_of(&live) else {
+        return Ok(None); // no save file — nothing to snapshot
+    };
+    if live_meta.modified_at <= session_start_ms {
+        return Ok(None); // save untouched this session
+    }
+
+    // "auto 2026-06-10 15h32" — chrono-free local timestamp via `date`.
+    let stamp = std::process::Command::new("date")
+        .arg("+%Y-%m-%d %Hh%M")
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| format!("ts {}", live_meta.modified_at));
+    let slot = backup(app, rom_path, game_id, &format!("auto {stamp}"))?;
+
+    // Prune: keep the newest AUTO_KEEP auto snapshots.
+    let mut autos: Vec<SlotMeta> = list(app, rom_path, game_id)?
+        .slots
+        .into_iter()
+        .filter(|s| s.file_name.starts_with("auto "))
+        .collect();
+    autos.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+    for old in autos.into_iter().skip(AUTO_KEEP) {
+        let _ = delete_slot(app, game_id, &old.file_name);
+    }
+    Ok(Some(slot))
 }
 
 pub fn delete_slot(app: &tauri::AppHandle, game_id: &str, file_name: &str) -> Result<(), String> {

@@ -83,11 +83,17 @@ fn emulator_alive(process_name: &str) -> bool {
 
 /// Called by launch_game after a successful `open -a`. Registers the session
 /// and spawns a detached tracker thread that accumulates play time while the
-/// emulator process is alive.
-pub fn track_session(app: tauri::AppHandle, game_id: String, emulator_app: String) {
+/// emulator process is alive, then auto-backs-up the save on exit.
+pub fn track_session(
+    app: tauri::AppHandle,
+    game_id: String,
+    emulator_app: String,
+    rom_path: String,
+) {
+    let session_start_ms = now_ms();
     mutate(&app, &game_id, |s| {
         s.sessions += 1;
-        s.last_played = now_ms();
+        s.last_played = session_start_ms;
     });
 
     std::thread::spawn(move || {
@@ -105,5 +111,7 @@ pub fn track_session(app: tauri::AppHandle, game_id: String, emulator_app: Strin
             std::thread::sleep(POLL);
             mutate(&app, &game_id, |s| s.seconds_played += POLL.as_secs());
         }
+        // Session over: snapshot the save if it changed (best-effort).
+        let _ = crate::saves::auto_backup(&app, &rom_path, &game_id, session_start_ms);
     });
 }

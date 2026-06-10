@@ -3,7 +3,14 @@
 // (e.g. Rust `emulator_app` => `emulatorApp`). Struct FIELDS stay snake_case.
 
 import { invoke } from "@tauri-apps/api/core";
-import type { Game, GameStats, SaveInfo, Settings, SlotMeta } from "./types";
+import type {
+  Game,
+  GameStats,
+  MelonStatus,
+  SaveInfo,
+  Settings,
+  SlotMeta,
+} from "./types";
 
 /** Recursively scans folders for .gba/.nds files and parses their headers. */
 export async function scanLibrary(folders: string[]): Promise<Game[]> {
@@ -74,6 +81,29 @@ export async function deleteSaveSlot(
   fileName: string,
 ): Promise<void> {
   return invoke<void>("delete_save_slot", { gameId, fileName });
+}
+
+/** Deletes one melonDS quick-save state (<rom>.ml1..ml8). */
+export async function deleteSavestate(
+  romPath: string,
+  fileName: string,
+): Promise<void> {
+  return invoke<void>("delete_savestate", { romPath, fileName });
+}
+
+/** melonDS integration status (config found? mappings applied?). */
+export async function melondsStatus(): Promise<MelonStatus> {
+  return invoke<MelonStatus>("melonds_status");
+}
+
+/** Writes the recommended keyboard mapping into melonDS's config. */
+export async function melondsApplyKeyboard(): Promise<string> {
+  return invoke<string>("melonds_apply_keyboard");
+}
+
+/** Writes the DualSense (PS5) controller mapping into melonDS's config. */
+export async function melondsApplyDualsense(): Promise<string> {
+  return invoke<string>("melonds_apply_dualsense");
 }
 
 /** Native folder picker. Resolves to null when the user cancels. */

@@ -9,7 +9,14 @@
 // stays previewable. The mock branch is dead code in production bundles.
 
 import * as ipc from "../ipc";
-import type { Game, GameStats, SaveInfo, Settings, SlotMeta } from "../types";
+import type {
+  Game,
+  GameStats,
+  MelonStatus,
+  SaveInfo,
+  Settings,
+  SlotMeta,
+} from "../types";
 
 function devFallbackAllowed(): boolean {
   return import.meta.env.DEV && !("__TAURI_INTERNALS__" in window);
@@ -76,7 +83,35 @@ export function getStats(gameId: string): Promise<GameStats | null> {
 export function listSaves(romPath: string, gameId: string): Promise<SaveInfo> {
   return withDevFallback(
     () => ipc.listSaves(romPath, gameId),
-    async () => ({ live: null, slots: [] }),
+    async () => ({ live: null, slots: [], states: [] }),
+  );
+}
+
+export function deleteSavestate(romPath: string, fileName: string): Promise<void> {
+  return withDevFallback(
+    () => ipc.deleteSavestate(romPath, fileName),
+    async () => undefined,
+  );
+}
+
+export function melondsStatus(): Promise<MelonStatus> {
+  return withDevFallback(
+    () => ipc.melondsStatus(),
+    async () => ({ config_found: false, keyboard_mapped: false, joystick_mapped: false }),
+  );
+}
+
+export function melondsApplyKeyboard(): Promise<string> {
+  return withDevFallback(
+    () => ipc.melondsApplyKeyboard(),
+    async () => "15 keyboard keys mapped",
+  );
+}
+
+export function melondsApplyDualsense(): Promise<string> {
+  return withDevFallback(
+    () => ipc.melondsApplyDualsense(),
+    async () => "12 controller buttons mapped",
   );
 }
 

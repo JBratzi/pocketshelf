@@ -133,12 +133,14 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <Row keys={["Shift", "F1"]}>Quick-save state (slots F1–F8)</Row>
             <Row keys={["F1"]}>Load state (slots F1–F8)</Row>
             <p className="mt-2 rounded-xl bg-bg-raised px-3 py-2.5 font-body text-xs leading-5 font-medium text-silver-500">
-              <b className="text-silver-300">First time?</b> In melonDS open{" "}
-              <span className="font-mono">Config → Input and Hotkeys</span> and map the
-              DS buttons once (click a button, press your key). Suggested layout:{" "}
+              <b className="text-silver-300">First time?</b> Go to{" "}
+              <span className="font-mono">Settings → melonDS integration</span> and
+              click <b className="text-silver-300">Set up keyboard keys</b> (and{" "}
+              <b className="text-silver-300">Set up PS5 controller</b> if you have a
+              DualSense paired) — PocketShelf writes the mapping into melonDS for you:{" "}
               <span className="font-mono text-silver-300">
                 Arrows = D-pad · X = A · Z = B · S = X · A = Y · Q = L · W = R · Enter =
-                Start · Right Shift = Select
+                Start · Shift = Select · Tab = fast-forward · F11 = fullscreen
               </span>
               . Quick-save states are different from the in-game save — use the in-game
               save (the one PocketShelf backs up) for real progress.

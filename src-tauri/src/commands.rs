@@ -4,6 +4,7 @@
 
 use tauri_plugin_dialog::DialogExt;
 
+use crate::melonds::{self, MelonStatus};
 use crate::rom::{self, Game};
 use crate::saves::{self, SaveInfo, SlotMeta};
 use crate::settings::{self, Settings};
@@ -65,7 +66,7 @@ pub fn launch_game(
             stderr.trim()
         ));
     }
-    stats::track_session(app, game_id, emulator_app);
+    stats::track_session(app, game_id, emulator_app, path);
     Ok(())
 }
 
@@ -105,6 +106,30 @@ pub fn restore_save(
     file_name: String,
 ) -> Result<(), String> {
     saves::restore(&app, &rom_path, &game_id, &file_name)
+}
+
+/// §2.13 — melonDS integration status (config found? mappings applied?).
+#[tauri::command]
+pub fn melonds_status() -> Result<MelonStatus, String> {
+    Ok(melonds::status())
+}
+
+/// §2.14 — write the recommended keyboard mapping into melonDS's config.
+#[tauri::command]
+pub fn melonds_apply_keyboard() -> Result<String, String> {
+    melonds::apply_keyboard()
+}
+
+/// §2.15 — write the DualSense (PS5) controller mapping into melonDS's config.
+#[tauri::command]
+pub fn melonds_apply_dualsense() -> Result<String, String> {
+    melonds::apply_dualsense()
+}
+
+/// §2.12 — delete one melonDS quick-save state (<rom>.ml1..ml8).
+#[tauri::command]
+pub fn delete_savestate(rom_path: String, file_name: String) -> Result<(), String> {
+    saves::delete_state(&rom_path, &file_name)
 }
 
 /// §2.11 — delete a snapshot slot (never touches the live save).

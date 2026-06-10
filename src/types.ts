@@ -63,6 +63,14 @@ export interface SaveInfo {
   live: SlotMeta | null;
   /** Named snapshots, newest first. */
   slots: SlotMeta[];
+  /** melonDS quick-saves `<rom>.ml1..ml8`, in F-key order. */
+  states: SlotMeta[];
+}
+
+export interface MelonStatus {
+  config_found: boolean;
+  keyboard_mapped: boolean;
+  joystick_mapped: boolean;
 }
 
 export function iconDataUri(game: Game): string | null {
