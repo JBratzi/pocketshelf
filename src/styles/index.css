@@ -61,3 +61,58 @@ body {
   background-image: radial-gradient(rgba(139, 123, 244, 0.045) 1px, transparent 1px);
   background-size: 22px 22px;
 }
+
+/* Scanline overlay — DetailPanel hero only (design-system.md §3.3). */
+.ps-scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgba(255, 255, 255, 0.012) 3px 4px
+  );
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ps-texture {
+    background-image: none;
+  }
+  .ps-scanlines::after {
+    background: none;
+  }
+}
+
+/* Sidebar faux-translucency (design-system.md §7.2). */
+.ps-sidebar {
+  background: linear-gradient(180deg, rgba(23, 23, 30, 0.92), rgba(18, 18, 23, 0.94));
+  border-right: 1px solid var(--color-border-default);
+  backdrop-filter: saturate(140%) blur(20px);
+}
+
+/* Card shadow hover transition runs via CSS in parallel with motion (§5.2). */
+.ps-card {
+  transition: box-shadow 180ms ease-out;
+}
+.ps-card:hover {
+  box-shadow: var(--ps-shadow-lift) !important;
+}
+
+/* macOS polish (design-system.md §7.4). */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: 2px;
+}
