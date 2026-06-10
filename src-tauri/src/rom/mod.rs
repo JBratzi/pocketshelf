@@ -66,9 +66,26 @@ fn parse_file(path: &Path) -> Option<Game> {
     }
 }
 
+/// Content-identity key: two copies of the same dump anywhere on disk must
+/// collapse into one shelf entry. Falls back to the path id when the header
+/// carried no game code (homebrew, corrupt header).
+fn dedup_key(g: &Game) -> String {
+    if g.game_code.is_empty() {
+        g.id.clone()
+    } else {
+        format!(
+            "{}:{}:{}:{}",
+            g.platform,
+            g.game_code,
+            g.internal_title.to_lowercase(),
+            g.size_bytes
+        )
+    }
+}
+
 /// Like `scan`, plus individually-added `files` (drag & drop). Loose files
 /// skip the hidden-name filter — an explicit add is an explicit intent.
-/// Same dedup-by-id and sort guarantees as `scan`.
+/// Same dedup and sort guarantees as `scan` (content identity, first wins).
 pub fn scan_paths(folders: &[String], files: &[String]) -> Vec<Game> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut games: Vec<Game> = Vec::new();
@@ -88,7 +105,7 @@ pub fn scan_paths(folders: &[String], files: &[String]) -> Vec<Game> {
                 continue;
             }
             if let Some(g) = parse_file(entry.path()) {
-                if seen.insert(g.id.clone()) {
+                if seen.insert(dedup_key(&g)) {
                     games.push(g);
                 }
             }
@@ -97,7 +114,7 @@ pub fn scan_paths(folders: &[String], files: &[String]) -> Vec<Game> {
 
     for file in files {
         if let Some(g) = parse_file(Path::new(file)) {
-            if seen.insert(g.id.clone()) {
+            if seen.insert(dedup_key(&g)) {
                 games.push(g);
             }
         }

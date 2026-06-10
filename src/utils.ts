@@ -57,3 +57,22 @@ export function monogramLetter(title: string): string {
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
+
+/** "2h 15m" / "45m" / "<1m". Total play time display. */
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) return "<1m";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+/** Compact local date-time for save slots / last played. */
+export function formatDateTime(epochMs: number): string {
+  if (!epochMs) return "—";
+  return new Date(epochMs).toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

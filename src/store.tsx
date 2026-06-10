@@ -213,7 +213,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       }
       toast("info", `Launching ${game.internal_title}…`);
       try {
-        await ipc.launchGame(game.path, emulatorApp);
+        await ipc.launchGame(game.path, emulatorApp, game.id);
       } catch (err) {
         toast("error", String(err));
       }

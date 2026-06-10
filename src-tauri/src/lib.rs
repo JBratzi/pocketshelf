@@ -2,11 +2,13 @@
 
 pub mod commands;
 pub mod rom;
+pub mod saves;
 pub mod settings;
+pub mod stats;
 
 use commands::{
-    get_settings, launch_game, pick_folder, pick_rom_files, save_settings, scan_library,
-    scan_paths,
+    backup_save, delete_save_slot, get_settings, get_stats, launch_game, list_saves, pick_folder,
+    pick_rom_files, restore_save, save_settings, scan_library, scan_paths,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -21,7 +23,12 @@ pub fn run() {
             save_settings,
             launch_game,
             pick_folder,
-            pick_rom_files
+            pick_rom_files,
+            get_stats,
+            list_saves,
+            backup_save,
+            restore_save,
+            delete_save_slot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

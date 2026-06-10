@@ -9,7 +9,7 @@
 // stays previewable. The mock branch is dead code in production bundles.
 
 import * as ipc from "../ipc";
-import type { Game, Settings } from "../types";
+import type { Game, GameStats, SaveInfo, Settings, SlotMeta } from "../types";
 
 function devFallbackAllowed(): boolean {
   return import.meta.env.DEV && !("__TAURI_INTERNALS__" in window);
@@ -55,9 +55,56 @@ export function saveSettings(settings: Settings): Promise<void> {
   );
 }
 
-export function launchGame(path: string, emulatorApp: string): Promise<void> {
+export function launchGame(
+  path: string,
+  emulatorApp: string,
+  gameId: string,
+): Promise<void> {
   return withDevFallback(
-    () => ipc.launchGame(path, emulatorApp),
+    () => ipc.launchGame(path, emulatorApp, gameId),
+    async () => undefined,
+  );
+}
+
+export function getStats(gameId: string): Promise<GameStats | null> {
+  return withDevFallback(
+    () => ipc.getStats(gameId),
+    async () => ({ seconds_played: 9540, last_played: 1765391000000, sessions: 7 }),
+  );
+}
+
+export function listSaves(romPath: string, gameId: string): Promise<SaveInfo> {
+  return withDevFallback(
+    () => ipc.listSaves(romPath, gameId),
+    async () => ({ live: null, slots: [] }),
+  );
+}
+
+export function backupSave(
+  romPath: string,
+  gameId: string,
+  name: string,
+): Promise<SlotMeta> {
+  return withDevFallback(
+    () => ipc.backupSave(romPath, gameId, name),
+    async () => ({ file_name: `${name}.sav`, size_bytes: 512 * 1024, modified_at: 0 }),
+  );
+}
+
+export function restoreSave(
+  romPath: string,
+  gameId: string,
+  fileName: string,
+): Promise<void> {
+  return withDevFallback(
+    () => ipc.restoreSave(romPath, gameId, fileName),
+    async () => undefined,
+  );
+}
+
+export function deleteSaveSlot(gameId: string, fileName: string): Promise<void> {
+  return withDevFallback(
+    () => ipc.deleteSaveSlot(gameId, fileName),
     async () => undefined,
   );
 }

@@ -1,12 +1,30 @@
-// DetailPanel — slide-in from the right (design-system.md §4.4, §5.4).
+// DetailPanel — slide-in launcher (design-system.md §4.4, §5.4):
+// Play + playtime stats + save-slot manager + metadata.
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Check, Copy, Play, X } from "lucide-react";
-import type { Game } from "../types";
+import {
+  Archive,
+  Check,
+  Copy,
+  Play,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
+import type { Game, GameStats, SaveInfo } from "../types";
 import { iconDataUri } from "../types";
 import { spring } from "../animations";
-import { formatBytes, middleTruncate, monogramLetter, monogramStyle } from "../utils";
+import * as ipc from "../dev/safeIpc";
+import { useToast } from "./Toast";
+import {
+  formatBytes,
+  formatDateTime,
+  formatDuration,
+  middleTruncate,
+  monogramLetter,
+  monogramStyle,
+} from "../utils";
 import { PlatformBadge } from "./PlatformBadge";
 
 interface DetailPanelProps {
@@ -15,6 +33,180 @@ interface DetailPanelProps {
   onPlay: (game: Game) => void;
   onClose: () => void;
   onOpenSettings: () => void;
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="font-display text-[11px] font-bold tracking-[0.08em] text-silver-500 uppercase">
+      {children}
+    </h3>
+  );
+}
+
+/** Playtime stats + save-slot manager. Refreshes while the panel is open so
+ * a session that just ended shows up without reopening the panel. */
+function LauncherSections({ game }: { game: Game }) {
+  const { toast } = useToast();
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [saves, setSaves] = useState<SaveInfo | null>(null);
+  const [slotName, setSlotName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [st, sv] = await Promise.all([
+        ipc.getStats(game.id),
+        ipc.listSaves(game.path, game.id),
+      ]);
+      setStats(st);
+      setSaves(sv);
+    } catch {
+      // Panel data is best-effort; the toast noise isn't worth it on poll.
+    }
+  }, [game.id, game.path]);
+
+  useEffect(() => {
+    void refresh();
+    const t = setInterval(() => void refresh(), 20_000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  async function run(action: () => Promise<unknown>, okMsg: string) {
+    setBusy(true);
+    try {
+      await action();
+      toast("success", okMsg);
+      await refresh();
+    } catch (err) {
+      toast("error", String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {/* Playtime */}
+      <div className="mt-4 flex flex-col gap-2 px-6">
+        <SectionTitle>Playtime</SectionTitle>
+        <div className="flex items-stretch gap-2">
+          {[
+            { label: "Played", value: formatDuration(stats?.seconds_played ?? 0) },
+            { label: "Sessions", value: String(stats?.sessions ?? 0) },
+            { label: "Last", value: stats ? formatDateTime(stats.last_played) : "—" },
+          ].map((cell) => (
+            <div
+              key={cell.label}
+              className="flex flex-1 flex-col items-center gap-0.5 rounded-xl bg-bg-raised px-2 py-2.5"
+            >
+              <span className="font-mono text-[13px] leading-4 font-bold text-silver-100">
+                {cell.value}
+              </span>
+              <span className="font-body text-[10px] leading-3 font-medium text-silver-500">
+                {cell.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Saves */}
+      <div className="mt-5 flex flex-col gap-2 px-6">
+        <SectionTitle>Saves</SectionTitle>
+
+        {saves?.live ? (
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-bg-raised px-3 py-2">
+            <div className="flex min-w-0 flex-col">
+              <span className="font-body text-xs font-bold text-silver-100">
+                Current save
+              </span>
+              <span className="font-mono text-[10px] leading-4 text-silver-500">
+                {formatBytes(saves.live.size_bytes)} · {formatDateTime(saves.live.modified_at)}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                run(
+                  () => ipc.backupSave(game.path, game.id, slotName),
+                  "Save backed up to a new slot",
+                )
+              }
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 font-display text-[11px] font-bold text-silver-300 transition-colors hover:border-primary-500 hover:text-silver-100 disabled:opacity-50"
+              title="Snapshot the current save into a named slot"
+            >
+              <Archive size={12} />
+              Backup
+            </button>
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed border-border-strong px-3 py-2.5 text-center font-body text-xs font-medium text-silver-700">
+            No save file yet — play first, your progress will appear here.
+          </p>
+        )}
+
+        {saves?.live && (
+          <input
+            type="text"
+            value={slotName}
+            onChange={(e) => setSlotName(e.target.value)}
+            placeholder="Slot name (optional) — e.g. “before Elite Four”"
+            className="h-8 rounded-[10px] bg-bg-raised px-3 font-body text-xs text-silver-300 placeholder:text-silver-700 focus:outline-1 focus:outline-primary-500"
+          />
+        )}
+
+        {(saves?.slots ?? []).map((slot) => (
+          <div
+            key={slot.file_name}
+            className="flex items-center justify-between gap-2 rounded-xl bg-bg-raised px-3 py-2"
+          >
+            <div className="flex min-w-0 flex-col">
+              <span
+                className="truncate font-body text-xs font-bold text-silver-300"
+                title={slot.file_name}
+              >
+                {slot.file_name.replace(/\.sav$/, "")}
+              </span>
+              <span className="font-mono text-[10px] leading-4 text-silver-500">
+                {formatBytes(slot.size_bytes)} · {formatDateTime(slot.modified_at)}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  run(
+                    () => ipc.restoreSave(game.path, game.id, slot.file_name),
+                    "Slot restored — previous save kept as .sav.bak",
+                  )
+                }
+                className="rounded-full p-1.5 text-silver-500 transition-colors hover:bg-white/5 hover:text-primary-300 disabled:opacity-50"
+                title="Restore this slot (becomes the save the emulator loads)"
+              >
+                <RotateCcw size={14} />
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  run(
+                    () => ipc.deleteSaveSlot(game.id, slot.file_name),
+                    "Slot deleted",
+                  )
+                }
+                className="rounded-full p-1.5 text-silver-500 transition-colors hover:bg-white/5 hover:text-coral disabled:opacity-50"
+                title="Delete this slot"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
@@ -135,6 +327,9 @@ export function DetailPanel({
           </button>
         )}
       </div>
+
+      {/* Launcher: playtime + saves */}
+      <LauncherSections game={game} />
 
       {/* Metadata */}
       <div className="mt-2 flex flex-col divide-y divide-border-default px-6 pb-8">

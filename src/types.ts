@@ -42,6 +42,29 @@ export const DEFAULT_SETTINGS: Settings = {
   emulator_nds: "melonDS",
 };
 
+export interface GameStats {
+  /** Total accumulated play time in seconds. */
+  seconds_played: number;
+  /** Unix epoch ms of most recent launch. 0 = never. */
+  last_played: number;
+  /** Launches via PocketShelf. */
+  sessions: number;
+}
+
+export interface SlotMeta {
+  file_name: string;
+  size_bytes: number;
+  /** Unix epoch ms. */
+  modified_at: number;
+}
+
+export interface SaveInfo {
+  /** Live `<rom>.sav` next to the ROM, if present. */
+  live: SlotMeta | null;
+  /** Named snapshots, newest first. */
+  slots: SlotMeta[];
+}
+
 export function iconDataUri(game: Game): string | null {
   return game.icon_png_base64
     ? `data:image/png;base64,${game.icon_png_base64}`
